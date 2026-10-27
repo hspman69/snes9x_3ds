@@ -38,6 +38,8 @@ Open the emulator menu, **Settings** tab, section **3D Layer Depth (this game)**
   Uncheck it to see all layers together: the selected layer stays in its strong colour and the other layers get a
   paler version of theirs, so you can judge the final picture. (Mode 7 backgrounds are not tinted.)
   **Reset Depths to Recommended** puts the five sliders back to the depths Recommended mode uses for this game.
+  Under the sliders, **Sprites priority 0 to 3: offset** move sprites of each SNES priority nearer or further than the
+  Sprites slider (all 0 by default, so the sprites stay together). Useful where characters walk behind part of a layer.
 
 Example Manual depths for ActRaiser action stages: BG1 -1, BG2 -4, BG3 +3, BG4 -2, Sprites 0
 (BG1 trees/grass, BG2 far background, BG3 HUD/pause text).
@@ -72,7 +74,7 @@ Open **Emulator** tab, **ROM Info**, note the CRC32. Add a line to `stereoGameTa
 - Auto is a guess from scroll speed: layers that drift on their own, or games with unusual
   layer use, can look wrong. Switch to Manual for those.
 - Mode 7 scenes get no receding depth (BG1's shift at most). Super Mario Kart and F-Zero stay mostly flat.
-- All sprites share one depth. Window/clip masks are not shifted; no per-priority depth within a layer.
+- Sprites share one depth unless you set Manual offsets per sprite priority. Window/clip masks are not shifted.
 - Shifted layers would leave an empty strip at the screen edges, so the layers are built a few tile columns wider
   than the screen and nothing is cropped.
 
