@@ -979,8 +979,10 @@ void makeOptionMenu(std::vector<SMenuItem>& items, std::vector<SMenuTab>& menuTa
 
                     if (CheckAndUpdate(settings3DS.StereoDepthMode, val)) {
                         // Manual starts from the depths that were in use
-                        if (val == STEREO_DEPTH_MANUAL && oldMode != STEREO_DEPTH_MANUAL)
+                        if (val == STEREO_DEPTH_MANUAL && oldMode != STEREO_DEPTH_MANUAL) {
                             gpu3dsStereoGetDepths(settings3DS.StereoLayerDepth);
+                            memset(settings3DS.StereoSpriteOffset, 0, sizeof(settings3DS.StereoSpriteOffset));
+                        }
 
                         GPU3DS.gameScreenBufferDesync = true;
                         menu3dsSetScreenDirty();
@@ -1007,6 +1009,12 @@ void makeOptionMenu(std::vector<SMenuItem>& items, std::vector<SMenuTab>& menuTa
                         [i]( int val ) { if (CheckAndUpdate(settings3DS.StereoLayerDepth[i], val)) menu3dsSetScreenDirty(); }, true);
                     items.back().HighlightLayer = i;
                 }
+                // sprites by their SNES priority: each one's depth relative to the Sprites slider (0 = all together)
+                for (int p = 0; p < 4; p++) {
+                    AddMenuGauge(items, "    Sprites priority " + std::to_string(p) + ": offset", -8, 8, settings3DS.StereoSpriteOffset[p],
+                        [p]( int val ) { if (CheckAndUpdate(settings3DS.StereoSpriteOffset[p], val)) menu3dsSetScreenDirty(); }, true);
+                    items.back().HighlightLayer = 4;
+                }
                 items.emplace_back([](int val) {
                     int rec[5];
                     gpu3dsStereoGetRecommended(rec);
@@ -1014,6 +1022,8 @@ void makeOptionMenu(std::vector<SMenuItem>& items, std::vector<SMenuTab>& menuTa
                     bool changed = false;
                     for (int i = 0; i < 5; i++)
                         changed |= CheckAndUpdate(settings3DS.StereoLayerDepth[i], rec[i]);
+                    for (int p = 0; p < 4; p++)
+                        changed |= CheckAndUpdate(settings3DS.StereoSpriteOffset[p], 0);
 
                     if (changed) {
                         GPU3DS.gameScreenBufferDesync = true;
@@ -1528,6 +1538,13 @@ bool settingsReadWriteFullListByGame(bool writeMode)
     } else if (!writeMode && detectedConfigVersion >= 1.6f) {
         // game configs saved before the depth modes existed keep using their own depth sliders
         settings3DS.StereoDepthMode = STEREO_DEPTH_MANUAL;
+    }
+
+    if (writeMode || detectedConfigVersion >= 1.8f) {
+        for (int i = 0; i < 4; ++i) {
+            snprintf(keyBuf, sizeof(keyBuf), "StereoSpriteOffset%d=%%d\n", i);
+            config3dsReadWriteInt32(stream, writeMode, keyBuf, &settings3DS.StereoSpriteOffset[i], -8, 8);
+        }
     }
 
     // skip reading new hotkey schema from older cfg files and map legacy key names in-place

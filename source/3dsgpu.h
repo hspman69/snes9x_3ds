@@ -80,6 +80,7 @@ typedef enum {
     ULOC_TEX_OFFSET,
     ULOC_UPDATE_FRAME,
     ULOC_STEREO_OFFSET,
+    ULOC_STEREO_PRIORITY,
     ULOC_COUNT
 } SGPU_SHADER_ULOC;
 
@@ -478,6 +479,7 @@ bool gpu3dsClearScreen(gfxScreen_t screen, bool isTopStereo = false);
 
 float gpu3dsGetIOD();
 void  gpu3dsSetStereoShift(float shift);   // per-layer stereo: x shift (texture pixels) for tile draws
+void  gpu3dsSetStereoPriorityShifts(const float shifts[4]);   // sprite priorities 0-3 (NULL = none); added to the shift above
 float gpu3dsGetIODBase();
 bool gpu3dsIs3DAvailable();
 bool gpu3dsIsWideAvailable();

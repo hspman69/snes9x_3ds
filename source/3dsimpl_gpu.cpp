@@ -564,6 +564,24 @@ static int stereoDepthShift(int depth, bool rightEye)
     return rightEye ? -(int)floorf(d / 2.0f) : (int)ceilf(d / 2.0f);
 }
 
+// Sprite priority p's depth relative to the sprite layer's depth. Manual mode only.
+static int stereoSpriteOffset(int p)
+{
+    return settings3DS.StereoDepthMode == STEREO_DEPTH_MANUAL ? settings3DS.StereoSpriteOffset[p] : 0;
+}
+
+// Horizontal shift (in texture pixels) of sprite priority p in one eye, on top of the layer shift.
+static float stereoSpritePriorityShift(int p, bool rightEye)
+{
+    int depths[5];
+    gpu3dsStereoGetDepths(depths);
+
+    int shift = stereoDepthShift(depths[LAYER_OBJ] + stereoSpriteOffset(p), rightEye)
+              - stereoDepthShift(depths[LAYER_OBJ], rightEye);
+
+    return (float)(shift * (GPU3DSExt.renderWidth / 256));
+}
+
 // Horizontal shift (in texture pixels) for a layer in one eye.
 static float stereoLayerShift(LAYER_ID id, bool rightEye)
 {
@@ -594,12 +612,17 @@ int gpu3dsStereoEdgeTiles()
                         : stereoAuto.current[id];
         int other = settings3DS.StereoDepthMode == STEREO_DEPTH_MANUAL ? depth : stereoAuto.target[id];
 
-        for (int eye = 0; eye < 2; eye++) {
-            int a = abs(stereoDepthShift(depth, eye != 0));
-            int b = abs(stereoDepthShift(other, eye != 0));
+        // sprites: every priority may sit at its own depth
+        for (int p = 0; p < (id == LAYER_OBJ ? 4 : 1); p++) {
+            int offset = id == LAYER_OBJ ? stereoSpriteOffset(p) : 0;
 
-            if (a > widest) widest = a;
-            if (b > widest) widest = b;
+            for (int eye = 0; eye < 2; eye++) {
+                int a = abs(stereoDepthShift(depth + offset, eye != 0));
+                int b = abs(stereoDepthShift(other + offset, eye != 0));
+
+                if (a > widest) widest = a;
+                if (b > widest) widest = b;
+            }
         }
     }
 
@@ -667,6 +690,17 @@ void gpu3dsDrawLayers(SLayerList *list) {
 
             if (id < LAYER_BACKDROP)
                 stereoSetLayerShift(stereoEye != 0 ? stereoLayerShift(id, stereoEye > 0) : 0.0f);
+
+            // sprites: each priority sits at its own depth, as a difference to the layer shift just set
+            // (all zero for the other layers, so this costs nothing outside the sprite pass)
+            if (id == LAYER_OBJ && stereoEye != 0) {
+                float priorityShift[4];
+                for (int p = 0; p < 4; p++)
+                    priorityShift[p] = stereoSpritePriorityShift(p, stereoEye > 0);
+                gpu3dsSetStereoPriorityShifts(priorityShift);
+            } else {
+                gpu3dsSetStereoPriorityShifts(NULL);
+            }
 
             if (id < LAYER_BACKDROP) {
                 if (list->useDrawArraysForTiledLayers) {
@@ -873,6 +907,7 @@ void gpu3dsDrawSnesScreenEye(bool rightEye) {
     gpu3dsDrawLayers(&GPU3DSExt.layerList);
     stereoEye = 0;
     stereoSetLayerShift(0.0f);
+    gpu3dsSetStereoPriorityShifts(NULL);
 }
 
 void gpu3dsEndSnesScreenEyes() {

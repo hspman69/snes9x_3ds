@@ -5,6 +5,9 @@
                                 ; x = texture offset (0.0 or 1.0 for mode5/6 hi-res flipping)
 .fvec       stereoOffset        ; #6
                                 ; x = horizontal shift in texture pixels for this layer and eye (0 = none)
+.fvec       stereoPriority[16]  ; #7 - 22
+                                ; x = extra shift for tiles whose depth value d is the index (sprite priorities
+                                ; use d = 3, 6, 9, 12); all zero except while the sprite layer is drawn
 
 ; Constants
 .constf c_base          (0, 1, 2, 8)    ; (x, y, z, w)
@@ -91,6 +94,8 @@ depth_computation:
     mul     r0.z, r0.y, r1.z            ; r0.z = r0.y / 256
     flr     r0.z, r0.z                  ; r0.z = floor(r0.y / 256)
     mad     r0.y, r0.z, r1.y, r0.y      ; r0.y = r0.y + r0.z * (-256) = r0.y - floor(r0.y / 256) * 256
+    mova    a0.x, r0.z                  ; a0.x = the tile's depth value d
+    add     r0.x, stereoPriority[a0.x].x, r0.x   ; per-priority shift (sprites only, see above)
     mul     r0.z, r0.z, r1.x            ; r0.z = r0.z / 16
 
 draw:
