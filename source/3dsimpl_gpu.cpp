@@ -649,8 +649,10 @@ void gpu3dsDrawLayers(SLayerList *list) {
                 GPU3DS.appliedRenderState.textureEnv = TEX_ENV_UNSET;   // the tint colour changes per layer: re-apply the environment
             }
 
-            if (id < LAYER_BACKDROP)
-                stereoSetLayerShift(stereoEye != 0 ? stereoLayerShift(id, stereoEye > 0) : 0.0f);
+            // Backdrop, colour math and brightness are full-screen quads drawn with this same vertex
+            // shader: they must not inherit the previous layer's shift, or the sub-screen sampled by
+            // colour math lands at the wrong place relative to the main screen.
+            stereoSetLayerShift(id < LAYER_BACKDROP && stereoEye != 0 ? stereoLayerShift(id, stereoEye > 0) : 0.0f);
 
             if (id < LAYER_BACKDROP) {
                 if (list->useDrawArraysForTiledLayers) {
